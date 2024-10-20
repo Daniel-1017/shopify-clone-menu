@@ -1,0 +1,17 @@
+{
+    "name": "menu-clone",
+    "version": "1.0.0",
+    "main": "main.js",
+    "type": "module",
+    "scripts": {
+        "clone-menu": "node clone-menu.js",
+        "delete-menu": "node delete-menu.js"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "dependencies": {
+        "inquirer": "^12.0.0"
+    }
+}
