@@ -5,23 +5,66 @@ import { CREATE_MENU } from "./shopify/graphql/mutations/index.js";
 
 (async () => {
     // ! 1. Get menus
-    const menus = await queryData(GET_MENUS, { first: 250 });
+    console.log("Getting menus...");
+    const menus = await queryData(GET_MENUS, { first: 2 });
 
     if (menus?.errors?.length > 0) return console.log(JSON.stringify(menus.errors, null, 2));
 
-    // ! 2. Get selected menu (selected by the user)
+    let selectedTitleMenu;
+
     const menuTitles = menus.data.menus.edges.map(({ node }) => ({
         name: `${node.title} (${node.handle})`,
         value: node.id,
     }));
+    if (menus.data.menus.pageInfo.hasNextPage) menuTitles.unshift({ name: "Next page ->", value: "*next*" });
 
-    const { selectedTitleMenu, newMenuTitle } = await getUserInput([
+    const { selectedTitleMenu: selectedOption } = await getUserInput([
         {
             type: "list",
             name: "selectedTitleMenu",
             message: "Select a menu",
             choices: menuTitles,
         },
+    ]);
+
+    if (!selectedOption) return console.log("Failed to get selected menu");
+
+    if (selectedOption !== "*next*") selectedTitleMenu = selectedOption;
+
+    while (menus.data.menus.pageInfo.hasNextPage && !selectedTitleMenu) {
+        const nextPageMenus = await queryData(GET_MENUS, { first: 1, after: menus.data.menus.pageInfo.endCursor });
+
+        if (nextPageMenus?.errors?.length > 0) return console.log(JSON.stringify(nextPageMenus.errors, null, 2));
+
+        menus.data.menus.edges = nextPageMenus.data.menus.edges;
+        menus.data.menus.pageInfo = nextPageMenus.data.menus.pageInfo;
+
+        const menuTitles = menus.data.menus.edges.map(({ node }) => ({
+            name: `${node.title} (${node.handle})`,
+            value: node.id,
+        }));
+        if (menus.data.menus.pageInfo.hasNextPage) menuTitles.unshift({ name: "Next page ->", value: "*next*" });
+
+        const { selectedTitleMenu: selectedOption } = await getUserInput([
+            {
+                type: "list",
+                name: "selectedTitleMenu",
+                message: "Select a menu",
+                choices: menuTitles,
+            },
+        ]);
+
+        if (!selectedOption) return console.log("Failed to get selected menu");
+
+        if (selectedOption === "*next*") continue;
+        selectedTitleMenu = selectedOption;
+    }
+
+    if (!selectedTitleMenu) return console.log("Failed to select menu title");
+
+    // ! 2. Get selected menu (selected by the user)
+
+    const { newMenuTitle } = await getUserInput([
         {
             type: "input",
             name: "newMenuTitle",
@@ -33,7 +76,7 @@ import { CREATE_MENU } from "./shopify/graphql/mutations/index.js";
         },
     ]);
 
-    if (!selectedTitleMenu) return console.log("Failed to get selected menu");
+    if (!newMenuTitle) return console.log("Failed to get selected menu title");
 
     // ! 3. Find menu by its title
     const selectedMenu = menus.data.menus.edges.find(({ node }) => node.id === selectedTitleMenu);

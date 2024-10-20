@@ -1,6 +1,6 @@
 export const GET_MENUS = `
-query getMenus($first: Int) {
-    menus(first: $first) {
+query getMenus($first: Int, $after: String) {
+    menus(first: $first, after: $after) {
         edges {
             node {
                 id
@@ -25,6 +25,10 @@ query getMenus($first: Int) {
                     }
                 }
             }
+        }
+        pageInfo {
+            endCursor
+            hasNextPage
         }
     }
 }
